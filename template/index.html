@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assistant Chat</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-frame {
+      background: white;
+      border-radius: 30px;
+      width: 100%;
+      max-width: 400px;
+      height: 90vh;
+      max-height: 640px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-window {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .message-row {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .bot-row {
+      flex-direction: row;
+    }
+
+    .user-row {
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .bubble {
+      max-width: 80%;
+      padding: 12px;
+      border-radius: 18px;
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .bot {
+      align-self: flex-start;
+      background-color: #f2ecff;
+    }
+
+    .user {
+      align-self: flex-end;
+      background-color: #d1eaff;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .button-group button {
+      padding: 10px;
+      background-color: #eee;
+      border: none;
+      border-radius: 20px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .input-box {
+      border-top: 1px solid #ddd;
+      display: flex;
+      padding: 10px;
+    }
+
+    .input-box input {
+      flex: 1;
+      border: none;
+      padding: 8px;
+      border-radius: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .input-box button {
+      margin-left: 8px;
+      padding: 8px 12px;
+      border: none;
+      background-color: #9b59b6;
+      color: white;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 500px) {
+      .chat-frame {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+      }
+    }
+
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-frame">
+    <div class="chat-window" id="chat">
+      <div class="message-row bot-row">
+        <img class="avatar" src="{{ url_for('static', filename='robot.png') }}" />
+        <div class="bubble bot">Hi there! 👋 I'm your virtual assistant. How are you feeling today?</div>
+      </div>
+    </div>
+
+    <div class="input-box">
+      <input type="text" id="inputText" placeholder="Type something..." />
+      <button onclick="sendInput()">Send</button>
+    </div>
+  </div>
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <script>
+    const chat = document.getElementById("chat");
+    let claimedRewards = [];
+
+    function addBubble(text, sender = 'bot') {
+      const row = document.createElement('div');
+      row.className = `message-row ${sender}-row`;
+
+      if (sender === 'bot') {
+        const avatar = document.createElement('img');
+        avatar.className = 'avatar';
+        avatar.src = '/static/robot.png';
+        row.appendChild(avatar);
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = `bubble ${sender}`;
+      bubble.innerHTML = text.replace(/\n\n/g, "<br><br>").replace(/\n/g, "<br>");
+      row.appendChild(bubble);
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addButtons(options, index = null) {
+      const container = document.createElement('div');
+      container.className = 'button-group';
+      options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.textContent = option;
+        btn.onclick = () => sendMessage(option, index);
+        container.appendChild(btn);
+      });
+      chat.appendChild(container);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+  function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const confetti = Array.from({ length: 150 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * -canvas.height,
+    r: Math.random() * 6 + 4,
+    d: Math.random() * 0.5 + 0.5,
+    color: `hsl(${Math.random() * 360}, 100%, 70%)`
+  }));
+
+  let animationFrame;
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let p of confetti) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, true);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      p.y += p.d * 8;
+      if (p.y > canvas.height) {
+        p.y = -10;
+        p.x = Math.random() * canvas.width;
+      }
+    }
+    animationFrame = requestAnimationFrame(draw);
+  }
+
+  draw();
+
+  // Stop drawing and clear canvas after 2 seconds
+  setTimeout(() => {
+    cancelAnimationFrame(animationFrame);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, 2000);
+}
+
+
+    function sendMessage(msg, index = null) {
+      addBubble(msg, 'user');
+
+      const payload = { message: msg, index: index };
+      if (index === "reward") {
+        payload.claimed = claimedRewards;
+      }
+
+      fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        addBubble(data.response, 'bot');
+
+        if (index === "reward" && !claimedRewards.includes(msg)) {
+          claimedRewards.push(msg);
+        }
+
+        if (data.next && data.next.confetti) {
+          launchConfetti();
+        }
+
+        if (data.options) {
+          addButtons(data.options, data.index);
+        }
+
+        if (data.next) {
+          setTimeout(() => {
+            addBubble(data.next.response, 'bot');
+
+            if (data.next.options) {
+              addButtons(data.next.options, data.next.index);
+            }
+
+            if (data.next.followup) {
+              setTimeout(() => {
+                addBubble(data.next.followup.response, 'bot');
+                if (data.next.followup.options) {
+                  addButtons(data.next.followup.options, data.next.followup.index);
+                }
+              }, 1000);
+            }
+          }, 1000);
+        }
+      });
+    }
+
+    function sendInput() {
+      const input = document.getElementById("inputText");
+      const msg = input.value.trim();
+      if (msg) {
+        sendMessage(msg);
+        input.value = "";
+      }
+    }
+
+    addButtons(["Sleepy", "I'm OK", "Super Excited", "Tired"]);
+  </script>
+</body>
+</html>
